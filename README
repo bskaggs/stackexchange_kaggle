@@ -1,0 +1,9 @@
+#download mulan and make it a maven dependency
+mvn org.apache.maven.plugins:maven-install-plugin:2.3.1:install-file -Dfile=mulan.jar -DgroupId=mulan -DartifactId=mulan -Dversion=1.4.0 -Dpackaging=jar
+
+java -cp target/facebook-stack-1.0-SNAPSHOT-jar-with-dependencies.jar mulan.Train jdbc:sqlite:/home/brad/projects/facebook_stack/Train.db
+time nice -n 19 java -cp target/facebook-stack-1.0-SNAPSHOT-jar-with-dependencies.jar stackoverflow.lucene.NearestNeighbors jdbc:sqlite:/home/brad/projects/facebook_stack/Test.db lucene_index 10 | gzip > nearest_10_test.csv.gz
+
+TODO:
+* do better conversion to plain text
+* try different analyzers
