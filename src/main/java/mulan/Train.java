@@ -4,6 +4,7 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.List;
 
 import mulan.classifier.lazy.MLkNN;
 import mulan.classifier.meta.RAkEL;
@@ -32,9 +33,9 @@ public class Train {
 		ResultSet result = statement.executeQuery(query);
 
 		ArrayList<Attribute> attInfo = new ArrayList<Attribute>();
-		attInfo.add(new Attribute("title", (ArrayList) null));
-		attInfo.add(new Attribute("body", (ArrayList) null));
-		attInfo.add(new Attribute("tags", (ArrayList) null));
+		attInfo.add(new Attribute("title", (List<String>) null));
+		attInfo.add(new Attribute("body", (List<String>) null));
+		attInfo.add(new Attribute("tags", (List<String>) null));
 		Instances data = new Instances("training", attInfo, 0);
 		
 		int count = 0;

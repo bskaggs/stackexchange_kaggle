@@ -8,12 +8,9 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVStrategy;
 import org.apache.commons.lang3.StringUtils;
-
-import stackoverflow.evaluate.Evaluator;
 
 public class VowpalPredict {
 	private static Charset UTF8 = Charset.forName("UTF-8");

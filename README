@@ -4,6 +4,32 @@ mvn org.apache.maven.plugins:maven-install-plugin:2.3.1:install-file -Dfile=mula
 java -cp target/facebook-stack-1.0-SNAPSHOT-jar-with-dependencies.jar mulan.Train jdbc:sqlite:/home/brad/projects/facebook_stack/Train.db
 time nice -n 19 java -cp target/facebook-stack-1.0-SNAPSHOT-jar-with-dependencies.jar stackoverflow.lucene.NearestNeighbors jdbc:sqlite:/home/brad/projects/facebook_stack/Test.db lucene_index 10 | gzip > nearest_10_test.csv.gz
 
-TODO:
+
+
+
+
+
+
+
+
+
+
+##grab everything
+##might need to do some dos2unix magic
+pv /mnt/data/stackoverflow/Test.csv.gz | zcat | ruby1.9.3 load_db.rb -c --database /mnt/data/stackoverflow/Test_split.db
+pv /mnt/data/stackoverflow/Train.csv.gz | zcat | ruby1.9.3 load_db.rb -c --database /mnt/data/stackoverflow/Train_split.db
+
+./run.sh stackoverflow.lucene.Indexer jdbc:sqlite:/mnt/data/stackoverflow/Train_split.db /mnt/data/stackoverflow/split_index train
+./run.sh stackoverflow.lucene.Indexer jdbc:sqlite:/mnt/data/stackoverflow/Test_split.db /mnt/data/stackoverflow/split_index test
+./run.sh stackoverflow.lucene.NearestNeighbors jdbc:sqlite:/mnt/data/stackoverflow/Test_split.db /mnt/data/stackoverflow/split_index 5 tbcl train | gzip > /mnt/data/stackoverflow/tbcl_all_5_nn.tar.gz
+
+==Sep 5==
 * do better conversion to plain text
+* split out code, title, text, and link targets
+* add title to default query
+* include corpus field in index, allowing indexing of test and training for TF-IDF purposes, but only returning train docs
+
+TODO
+* try different TF-IDF similarities
+* vary fields used
 * try different analyzers

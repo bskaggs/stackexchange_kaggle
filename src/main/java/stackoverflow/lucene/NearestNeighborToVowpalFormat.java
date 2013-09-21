@@ -30,10 +30,10 @@ public class NearestNeighborToVowpalFormat {
 		Class.forName("org.sqlite.JDBC");
 		Connection connection = DriverManager.getConnection(args[0]);
 		
-		
 		StandardAnalyzer analyzer = new StandardAnalyzer(Version.LUCENE_44);
 		int numToConsider = Integer.parseInt(args[1]);
 		boolean train = Boolean.parseBoolean(args[2]);
+		
 		PreparedStatement statement;
 		if (train) {
 			statement = connection.prepareStatement("SELECT body, title, tags FROM questions WHERE id = ? LIMIT 1");
@@ -126,6 +126,7 @@ public class NearestNeighborToVowpalFormat {
 				System.out.println(document);
 			}
 		}
+		analyzer.close();
 		statement.close();
 		connection.close();
 	}

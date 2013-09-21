@@ -18,7 +18,10 @@ public class UnionPredict {
 	private static Charset UTF8 = Charset.forName("UTF-8");
 	
 	public static void main(String[] args) throws Exception {
-		int numToConsider = Integer.parseInt(args[0]);
+		int numToConsider = 1;
+		if (args.length > 0) {
+			numToConsider = Integer.parseInt(args[0]);
+		}
 		BufferedReader in;
 		if (args.length > 1) {
 			in = new BufferedReader(new InputStreamReader(new FileInputStream(args[1]), UTF8));
