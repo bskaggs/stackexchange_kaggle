@@ -11,15 +11,17 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.PosixParser;
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.queries.mlt.MoreLikeThis;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.store.MMapDirectory;
-import org.apache.lucene.util.Version;
 
 public class NearestNeighborsRunner {
 	private final static ThreadLocal<NearestNeighborsFinder> finderCache = new ThreadLocal<NearestNeighborsFinder>();
@@ -45,22 +47,39 @@ public class NearestNeighborsRunner {
 	}
 	
 	public static void main(String[] args) throws Exception {
+		Options options = new Options();
+		options.addOption("d", true, "database");
+		options.addOption("i", true, "index directory");
+		options.addOption("a", true, "analyzer class. Default is standardanalyzer");
+		options.addOption("s", true, "SQL to run");
+		options.addOption("c", true, "Corpus name");
+		options.addOption("n", true, "Number of results");
+		options.addOption("h", "help", false, "Get help");
+		CommandLineParser parser = new PosixParser();
+		CommandLine cmd = parser.parse(options, args);
+		
+		if (cmd.hasOption("help")) {
+			HelpFormatter formatter = new HelpFormatter();
+			formatter.printHelp( "indexer", options );
+			System.exit(0);
+		}
+		
 		Class.forName("org.sqlite.JDBC");
-	
-		Connection connection = DriverManager.getConnection(args[0]);
-		reader = DirectoryReader.open(new MMapDirectory(new File(args[1])));
-		numResults = Integer.parseInt(args[2]);
-		String fieldSql = args[3];
-		if (args.length > 4 && !("-".equals(args[4]))) {
-			 corpusQuery = new TermQuery(new Term("corpus", args[4]));
+		Connection connection = DriverManager.getConnection(cmd.getOptionValue("d"));
+		reader = DirectoryReader.open(new MMapDirectory(new File(cmd.getOptionValue("i"))));
+		numResults = Integer.parseInt(cmd.getOptionValue("n"));
+		String fieldSql = cmd.getOptionValue("s");
+		String corpus = cmd.getOptionValue("c");
+		if (corpus != null) {
+			 corpusQuery = new TermQuery(new Term("corpus", corpus));
 		}
 		
 		String q = "SELECT id, " + fieldSql + " as text FROM questions;";
 		
 		Statement statement = connection.createStatement();
 		ResultSet result = statement.executeQuery(q);
-
-		analyzer = new StandardAnalyzer(Version.LUCENE_44);
+		
+		analyzer = Indexer.getAnalyzer(cmd.getOptionValue("a"));
 		searcher = new IndexSearcher(reader);
 		
 		int numThreads = Runtime.getRuntime().availableProcessors();
@@ -70,16 +89,13 @@ public class NearestNeighborsRunner {
 		int count = 0;
 		while (result.next()) {
 			count++;
-			
-		
 			final String id = result.getString("id");
 			final String text = result.getString("text");
 			
 			completionService.submit(new Callable<String>() {
 				@Override
 				public String call() throws Exception {
-					NearestNeighborsFinder finder = getFinder();
-					return finder.find(id, text);
+					return getFinder().find(id, text);
 				}
 			});
 			

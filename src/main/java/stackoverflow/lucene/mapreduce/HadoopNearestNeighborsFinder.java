@@ -22,13 +22,13 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.queries.mlt.MoreLikeThis;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.store.MMapDirectory;
 import org.apache.lucene.util.Version;
 
+import stackoverflow.lucene.MoreLikeThis;
 import stackoverflow.lucene.NearestNeighborsFinder;
 
 public class HadoopNearestNeighborsFinder extends Configured implements Tool{

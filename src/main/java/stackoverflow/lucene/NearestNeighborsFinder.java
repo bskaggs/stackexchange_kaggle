@@ -6,7 +6,6 @@ import java.util.Collections;
 import java.util.Set;
 
 import org.apache.lucene.document.Document;
-import org.apache.lucene.queries.mlt.MoreLikeThis;
 import org.apache.lucene.search.BooleanClause.Occur;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.IndexSearcher;
