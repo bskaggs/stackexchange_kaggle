@@ -31,7 +31,7 @@ import org.apache.lucene.store.SimpleFSDirectory;
 import org.apache.lucene.util.Version;
 
 public class Indexer {
-	public static <T> void main(String[] args) throws Exception {
+	public static void main(String[] args) throws Exception {
 		
 		Options options = new Options();
 		options.addOption("d", true, "database");
@@ -80,7 +80,6 @@ public class Indexer {
 		
 		while (result.next()) {
 			count ++;
-			final Document document = new Document();
 			
 			final int id = result.getInt("id");
 			final String text = result.getString("text");
@@ -90,6 +89,7 @@ public class Indexer {
 				@Override
 				public void run() {
 					try {
+						Document document = new Document();
 						document.add(new IntField("id", id , Field.Store.YES));
 						document.add(corpusField);
 						document.add(new TextField("tags", tags, Field.Store.YES));
@@ -113,11 +113,12 @@ public class Indexer {
 		}
 		
 		executor.shutdown();
-		System.err.println("Waiting for indexers to finish...");
+		System.err.println("\nWaiting for indexers to finish...");
 		while (!executor.awaitTermination(1, TimeUnit.SECONDS)) {
 			System.err.println("Still waiting for indexers to finish...");
 		}
-		
+		System.err.println("Forcing merge...");
+		writer.forceMerge(1);
 		writer.close();
 		result.close();
 		statement.close();

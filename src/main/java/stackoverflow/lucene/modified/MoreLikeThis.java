@@ -13,15 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package stackoverflow.lucene;
+package stackoverflow.lucene.modified;
 
 import gnu.trove.impl.Constants;
-import gnu.trove.impl.hash.THash;
-import gnu.trove.impl.hash.TIntIntHash;
 import gnu.trove.map.hash.TObjectIntHashMap;
 
-import java.io.*;
-import java.util.*;
+import java.io.IOException;
+import java.io.Reader;
+import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
@@ -34,9 +38,10 @@ import org.apache.lucene.index.MultiFields;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.Terms;
 import org.apache.lucene.index.TermsEnum;
-import org.apache.lucene.search.*;
-import org.apache.lucene.search.similarities.DefaultSimilarity;
-import org.apache.lucene.search.similarities.TFIDFSimilarity;
+import org.apache.lucene.search.BooleanClause;
+import org.apache.lucene.search.BooleanQuery;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.CharsRef;
 import org.apache.lucene.util.PriorityQueue;
@@ -162,7 +167,7 @@ public final class MoreLikeThis {
    * @see #getMinDocFreq
    * @see #setMinDocFreq
    */
-  public static final int DEFAULT_MIN_DOC_FREQ = 5;
+	public static final int DEFAULT_MIN_DOC_FREQ = 5;
 
   /**
    * Ignore words which occur in more than this many docs.
@@ -279,7 +284,7 @@ public final class MoreLikeThis {
   /**
    * For idf() calculations.
    */
-  private TFIDFSimilarity similarity;// = new DefaultSimilarity();
+  private BM25Similarity similarity;// = new DefaultSimilarity();
 
   private final TObjectIntHashMap<String> freqCache = new TObjectIntHashMap<String>(Constants.DEFAULT_CAPACITY, Constants.DEFAULT_LOAD_FACTOR, -1); 
   
@@ -292,6 +297,8 @@ public final class MoreLikeThis {
    * Boost factor to use when boosting the terms
    */
   private float boostFactor = 1;
+
+private IndexReader termStatsReader;
 
   /**
    * Returns the boost factor used when boosting terms
@@ -315,21 +322,22 @@ public final class MoreLikeThis {
   /**
    * Constructor requiring an IndexReader.
    */
-  public MoreLikeThis(IndexReader ir) {
-    this(ir, new DefaultSimilarity());
+  public MoreLikeThis(IndexReader ir, IndexReader termStatsReader) {
+    this(ir, termStatsReader, new BM25Similarity());
   }
 
-  public MoreLikeThis(IndexReader ir, TFIDFSimilarity sim) {
+  public MoreLikeThis(IndexReader ir, IndexReader termStatsReader, BM25Similarity sim) {
     this.ir = ir;
+    this.termStatsReader = termStatsReader;
     this.similarity = sim;
   }
 
 
-  public TFIDFSimilarity getSimilarity() {
+  public BM25Similarity getSimilarity() {
     return similarity;
   }
 
-  public void setSimilarity(TFIDFSimilarity similarity) {
+  public void setSimilarity(BM25Similarity similarity) {
     this.similarity = similarity;
   }
 
@@ -649,17 +657,9 @@ public final class MoreLikeThis {
       }
 
       // go through all the fields and find the largest document frequency
-      String topField = fieldNames[0];
       int docFreq = 0;
       for (String fieldName : fieldNames) {
-        int freq = freqCache.get(fieldName);
-        if (freq == -1) {
-        	freq = ir.docFreq(new Term(fieldName, word));
-        	freqCache.put(fieldName, freq);
-        }
-        
-        
-        topField = (freq > docFreq) ? fieldName : topField;
+        int	freq = termStatsReader.docFreq(new Term(fieldName, word));
         docFreq = (freq > docFreq) ? freq : docFreq;
       }
 
@@ -673,6 +673,14 @@ public final class MoreLikeThis {
 
       if (docFreq == 0) {
         continue; // index update problem?
+      }
+      
+      docFreq = 0;
+      String topField = fieldNames[0];
+      for (String fieldName : fieldNames) {
+        int	freq = ir.docFreq(new Term(fieldName, word));
+        topField = (freq > docFreq) ? fieldName : topField;
+        docFreq = (freq > docFreq) ? freq : docFreq;
       }
 
       float idf = similarity.idf(docFreq, numDocs);

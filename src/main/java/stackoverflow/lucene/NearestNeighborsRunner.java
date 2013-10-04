@@ -20,27 +20,33 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.store.MMapDirectory;
+
+import stackoverflow.lucene.modified.BM25Similarity;
+import stackoverflow.lucene.modified.MoreLikeThis;
 
 public class NearestNeighborsRunner {
 	private final static ThreadLocal<NearestNeighborsFinder> finderCache = new ThreadLocal<NearestNeighborsFinder>();
 	private static int numResults;
 	
-	private static TermQuery corpusQuery;
+	private static Term corpusTerm;
 	
 	private static IndexSearcher searcher;
 	private static Analyzer analyzer;
-	private static DirectoryReader reader;
+	
+	private static DirectoryReader termStatsReader;
+	private static DirectoryReader searchReader;
 	
 	public static NearestNeighborsFinder getFinder() {
 		NearestNeighborsFinder finder = finderCache.get();
 		if (finder == null) {
-			MoreLikeThis mlt = new MoreLikeThis(reader);
+			MoreLikeThis mlt = new MoreLikeThis(searchReader, termStatsReader);
 			mlt.setAnalyzer(analyzer);
 			String searchField = "text";
 			mlt.setFieldNames(new String[] {searchField} );
-			finder = new NearestNeighborsFinder(mlt, searcher, searchField, corpusQuery, numResults);
+			mlt.setMinDocFreq(2);
+			mlt.setMinTermFreq(1);
+			finder = new NearestNeighborsFinder(mlt, searcher, searchField, corpusTerm, numResults);
 			finderCache.set(finder);
 		}
 		return finder;
@@ -49,7 +55,8 @@ public class NearestNeighborsRunner {
 	public static void main(String[] args) throws Exception {
 		Options options = new Options();
 		options.addOption("d", true, "database");
-		options.addOption("i", true, "index directory");
+		options.addOption("i", true, "index directory (training and testing)");
+		options.addOption("t", true, "term stats directory (training only)");
 		options.addOption("a", true, "analyzer class. Default is standardanalyzer");
 		options.addOption("s", true, "SQL to run");
 		options.addOption("c", true, "Corpus name");
@@ -66,12 +73,22 @@ public class NearestNeighborsRunner {
 		
 		Class.forName("org.sqlite.JDBC");
 		Connection connection = DriverManager.getConnection(cmd.getOptionValue("d"));
-		reader = DirectoryReader.open(new MMapDirectory(new File(cmd.getOptionValue("i"))));
+		searchReader = DirectoryReader.open(new MMapDirectory(new File(cmd.getOptionValue("i"))));
+		String termStatsDir = cmd.getOptionValue("m");
+		if (termStatsDir != null) {
+			termStatsReader = DirectoryReader.open(new MMapDirectory(new File(termStatsDir)));
+		} else {
+			termStatsReader = searchReader;
+		}
+		
+		searcher = new IndexSearcher(searchReader);
+		searcher.setSimilarity(new BM25Similarity());
+		
 		numResults = Integer.parseInt(cmd.getOptionValue("n"));
 		String fieldSql = cmd.getOptionValue("s");
 		String corpus = cmd.getOptionValue("c");
 		if (corpus != null) {
-			 corpusQuery = new TermQuery(new Term("corpus", corpus));
+			 corpusTerm = new Term("corpus", corpus);
 		}
 		
 		String q = "SELECT id, " + fieldSql + " as text FROM questions;";
@@ -80,9 +97,8 @@ public class NearestNeighborsRunner {
 		ResultSet result = statement.executeQuery(q);
 		
 		analyzer = Indexer.getAnalyzer(cmd.getOptionValue("a"));
-		searcher = new IndexSearcher(reader);
-		
 		int numThreads = Runtime.getRuntime().availableProcessors();
+		numThreads = 10;
 		ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 		ExecutorCompletionService<String> completionService = new ExecutorCompletionService<String>(executor);
 		
@@ -100,7 +116,8 @@ public class NearestNeighborsRunner {
 			});
 			
 			if (count > numThreads) {
-				System.out.println(completionService.take().get());
+				String res = completionService.take().get();
+				System.out.println(res);
 			}
 			
 			if (count % 10000 == 0) {
@@ -120,7 +137,10 @@ public class NearestNeighborsRunner {
 			System.out.println(task.get());
 		}
 		
-		reader.close();
+		termStatsReader.close();
+		if (termStatsReader != searchReader) {
+			searchReader.close();
+		}
 		result.close();
 		statement.close();
 		connection.close();

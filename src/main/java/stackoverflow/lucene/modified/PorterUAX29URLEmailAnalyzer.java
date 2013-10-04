@@ -1,4 +1,4 @@
-package stackoverflow.lucene;
+package stackoverflow.lucene.modified;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more

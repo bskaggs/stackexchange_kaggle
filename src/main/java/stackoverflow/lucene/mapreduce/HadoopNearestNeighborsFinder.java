@@ -28,8 +28,8 @@ import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.store.MMapDirectory;
 import org.apache.lucene.util.Version;
 
-import stackoverflow.lucene.MoreLikeThis;
 import stackoverflow.lucene.NearestNeighborsFinder;
+import stackoverflow.lucene.modified.MoreLikeThis;
 
 public class HadoopNearestNeighborsFinder extends Configured implements Tool{
 	public static class NearestNeighborsMapper extends Mapper<LongWritable, ResultSet, Text, NullWritable> {
@@ -39,16 +39,16 @@ public class HadoopNearestNeighborsFinder extends Configured implements Tool{
 			Configuration conf = context.getConfiguration();
 
 			int numResults = conf.getInt("nnf.number", 5);
-			Query corpusQuery = new TermQuery(new Term("corpus", "train"));
+			Term corpusTerm = new Term("corpus", "train");
 			reader = DirectoryReader.open(new MMapDirectory(new File(conf.get("nnf.index") + "/" + conf.get("nnf.index") )));
 			StandardAnalyzer analyzer = new StandardAnalyzer(Version.LUCENE_44);
 			IndexSearcher searcher = new IndexSearcher(reader);
-			MoreLikeThis mlt = new MoreLikeThis(reader);
+			MoreLikeThis mlt = new MoreLikeThis(reader, reader);
 			mlt.setAnalyzer(analyzer);
 			String searchField = "text";
 			mlt.setFieldNames(new String[] {searchField} );
 			
-			finder = new NearestNeighborsFinder(mlt, searcher, searchField, corpusQuery, numResults);
+			finder = new NearestNeighborsFinder(mlt, searcher, searchField, corpusTerm, numResults);
 		}
 		
 		protected void map(LongWritable key, ResultSet result, Context context) throws java.io.IOException, InterruptedException {
