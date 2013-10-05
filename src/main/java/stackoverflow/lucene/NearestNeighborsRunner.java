@@ -71,9 +71,11 @@ public class NearestNeighborsRunner {
 			System.exit(0);
 		}
 		
+		
 		Class.forName("org.sqlite.JDBC");
 		Connection connection = DriverManager.getConnection(cmd.getOptionValue("d"));
 		searchReader = DirectoryReader.open(new MMapDirectory(new File(cmd.getOptionValue("i"))));
+		
 		String termStatsDir = cmd.getOptionValue("m");
 		if (termStatsDir != null) {
 			termStatsReader = DirectoryReader.open(new MMapDirectory(new File(termStatsDir)));
@@ -98,7 +100,6 @@ public class NearestNeighborsRunner {
 		
 		analyzer = Indexer.getAnalyzer(cmd.getOptionValue("a"));
 		int numThreads = Runtime.getRuntime().availableProcessors();
-		numThreads = 10;
 		ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 		ExecutorCompletionService<String> completionService = new ExecutorCompletionService<String>(executor);
 		
