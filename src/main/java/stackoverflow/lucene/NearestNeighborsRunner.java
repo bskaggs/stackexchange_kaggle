@@ -44,8 +44,9 @@ public class NearestNeighborsRunner {
 			mlt.setAnalyzer(analyzer);
 			String searchField = "text";
 			mlt.setFieldNames(new String[] {searchField} );
-			mlt.setMinDocFreq(2);
+			mlt.setMinDocFreq(1);
 			mlt.setMinTermFreq(1);
+			
 			finder = new NearestNeighborsFinder(mlt, searcher, searchField, corpusTerm, numResults);
 			finderCache.set(finder);
 		}
